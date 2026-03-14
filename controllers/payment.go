@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/gofiber/fiber/v2"
@@ -9,6 +10,8 @@ import (
 	"github.com/harveyasprilla/sonifoy/payment-service/utils"
 	"gorm.io/gorm"
 	"log"
+	"net/http"
+	"os"
 )
 
 // SeedPackages inserts the default star packages if they don't exist
@@ -109,6 +112,30 @@ func BuyStars(c *fiber.Ctx) error {
 	
 	// We use the same Kafka utility as the other services
 	utils.PublishEvent(c.Context(), fmt.Sprintf("%d", userID), eventData)
+
+	// 6. Notify Wallet Service via Internal HTTP request for synchronous balance update
+	walletURL := os.Getenv("WALLET_SERVICE_URL")
+	if walletURL == "" {
+		walletURL = "http://wallet-service.railway.internal:8080" // default for Railway
+	}
+
+	addStarsReq := map[string]interface{}{
+		"user_id":                userID,
+		"star_type":              pkg.Type,
+		"amount":                 pkg.Amount,
+		"payment_transaction_id": transaction.ID,
+	}
+
+	reqBody, _ := json.Marshal(addStarsReq)
+	resp, err := http.Post(walletURL+"/internal/wallet/add-stars", "application/json", bytes.NewBuffer(reqBody))
+	if err != nil || resp.StatusCode != http.StatusOK {
+		log.Printf("Failed to synchronously notify wallet service: %v", err)
+	} else {
+		log.Println("Wallet service notified successfully via HTTP")
+	}
+	if resp != nil {
+		resp.Body.Close()
+	}
 
 	return c.JSON(fiber.Map{
 		"message": "Payment successful",
