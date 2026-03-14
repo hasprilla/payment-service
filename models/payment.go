@@ -26,6 +26,7 @@ type PaymentTransaction struct {
 	Currency      string         `gorm:"default:'COP'" json:"currency"`
 	Status        string         `gorm:"default:'completed'" json:"status"` // pending, completed, failed
 	PaymentMethod string         `json:"payment_method"`
+	RecipientArtistID uint       `gorm:"index" json:"recipient_artist_id,omitempty"`
 	CreatedAt     time.Time      `json:"createdAt"`
 	UpdatedAt     time.Time      `json:"updatedAt"`
 }
@@ -36,4 +37,5 @@ type PurchaseRequest struct {
 	Expiry        string `json:"expiry"`
 	CVV           string `json:"cvv"`
 	Cardholder    string `json:"cardholder"`
+	RecipientArtistID uint `json:"recipient_artist_id,omitempty"`
 }

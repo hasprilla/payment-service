@@ -91,6 +91,7 @@ func BuyStars(c *fiber.Ctx) error {
 		Currency:      pkg.Currency,
 		Status:        "completed",
 		PaymentMethod: "credit_card",
+		RecipientArtistID: req.RecipientArtistID,
 	}
 
 	if err := tx.Create(&transaction).Error; err != nil {
@@ -107,6 +108,7 @@ func BuyStars(c *fiber.Ctx) error {
 		"star_type":      pkg.Type,
 		"star_amount":    pkg.Amount,
 		"transaction_id": transaction.ID,
+		"recipient_id":   req.RecipientArtistID,
 	}
 	eventData, _ := json.Marshal(event)
 	
@@ -119,11 +121,17 @@ func BuyStars(c *fiber.Ctx) error {
 		walletURL = "http://wallet-service.railway.internal:8080" // default for Railway
 	}
 
+	targetUserID := userID
+	if req.RecipientArtistID > 0 {
+		targetUserID = req.RecipientArtistID
+	}
+
 	addStarsReq := map[string]interface{}{
-		"user_id":                userID,
+		"user_id":                targetUserID,
 		"star_type":              pkg.Type,
 		"amount":                 pkg.Amount,
 		"payment_transaction_id": transaction.ID,
+		"donor_id":               userID,
 	}
 
 	reqBody, _ := json.Marshal(addStarsReq)
