@@ -7,6 +7,7 @@ import (
 	"github.com/harveyasprilla/sonifoy/payment-service/config"
 	"github.com/harveyasprilla/sonifoy/payment-service/models"
 	"github.com/harveyasprilla/sonifoy/payment-service/utils"
+	"gorm.io/gorm"
 	"log"
 )
 
