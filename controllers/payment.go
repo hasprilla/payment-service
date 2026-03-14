@@ -21,9 +21,9 @@ func SeedPackages(db *gorm.DB) {
 
 	if count == 0 {
 		packages := []models.StarPackage{
-			{Name: "Estrella de Plata", Type: "silver", Price: 4000, Currency: "COP", Amount: 1},
-			{Name: "Estrella de Bronce", Type: "bronze", Price: 6000, Currency: "COP", Amount: 1},
-			{Name: "Estrella de Oro", Type: "gold", Price: 8000, Currency: "COP", Amount: 1},
+			{Name: "Estrella de Bronce", Type: "bronze", Price: 2000, Currency: "COP", Amount: 1},
+			{Name: "Estrella de Plata", Type: "silver", Price: 8000, Currency: "COP", Amount: 5},
+			{Name: "Estrella de Oro", Type: "gold", Price: 15000, Currency: "COP", Amount: 10},
 		}
 
 		if err := db.Create(&packages).Error; err != nil {
