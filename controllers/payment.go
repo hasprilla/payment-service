@@ -48,17 +48,23 @@ func GetPackages(c *fiber.Ctx) error {
 
 // BuyStars processes a mocked credit card payment
 func BuyStars(c *fiber.Ctx) error {
-	// 1. Get User ID from JWT context (In a real scenario, middleware sets this)
-	// For simulation, we'll extract it from an Authorization header manually
-	// Or expect it in the query/body for local testing since we don't have the auth middleware here yet
-	// Let's assume auth middleware is applied in API gateway, and passing X-User-Id header
-	userIDStr := c.Get("X-User-Id")
-	if userIDStr == "" {
-		// Fallback for direct testing
-		userIDStr = "1"
+	// 1. Get User ID from JWT context (Set by Protected middleware)
+	userIdLocal := c.Locals("user_id")
+	if userIdLocal == nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized"})
 	}
+
 	var userID uint
-	fmt.Sscanf(userIDStr, "%d", &userID)
+	switch v := userIdLocal.(type) {
+	case float64:
+		userID = uint(v)
+	case uint:
+		userID = v
+	case int:
+		userID = uint(v)
+	default:
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Invalid user context"})
+	}
 
 	var req models.PurchaseRequest
 	if err := c.BodyParser(&req); err != nil {

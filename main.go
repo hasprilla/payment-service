@@ -11,6 +11,7 @@ import (
 
 	"github.com/harveyasprilla/sonifoy/payment-service/config"
 	"github.com/harveyasprilla/sonifoy/payment-service/controllers"
+	"github.com/harveyasprilla/sonifoy/payment-service/middleware"
 	"github.com/harveyasprilla/sonifoy/payment-service/models"
 )
 
@@ -45,7 +46,7 @@ func main() {
 
 	// Endpoints
 	api.Get("/packages", controllers.GetPackages)
-	api.Post("/buy", controllers.BuyStars) // Would require authentication middleware
+	api.Post("/buy", middleware.Protected(), controllers.BuyStars)
 
 	// Seed star packages if they don't exist
 	controllers.SeedPackages(config.DB)
