@@ -160,6 +160,7 @@ func BuyStars(c *fiber.Ctx) error {
 		resp.Body.Close()
 	}
 
+	log.Printf("[DEBUG] BuyStars completed successfully for user %d", userID)
 	return c.JSON(fiber.Map{
 		"message": "Payment successful",
 		"transaction": transaction,
