@@ -107,12 +107,15 @@ func BuyStars(c *fiber.Ctx) error {
 	}
 
 	if err := tx.Create(&transaction).Error; err != nil {
+		log.Printf("[ERROR] BuyStars failed to create transaction: %v", err)
 		tx.Rollback()
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to create transaction record"})
 	}
 	tx.Commit()
+	log.Printf("[DEBUG] BuyStars transaction created with ID: %d", transaction.ID)
 
 	// 5. Publish to Kafka to notify Wallet Service (Async)
+	log.Printf("[DEBUG] BuyStars publishing event to Kafka...")
 	event := map[string]interface{}{
 		"event":          "star_purchase",
 		"user_id":        userID,
