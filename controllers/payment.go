@@ -16,22 +16,21 @@ import (
 
 // SeedPackages inserts the default star packages if they don't exist
 func SeedPackages(db *gorm.DB) {
-	var count int64
-	db.Model(&models.StarPackage{}).Count(&count)
+	packages := []models.StarPackage{
+		{Type: "bronze", Name: "1 Bronce", Price: 2000, Currency: "COP", Amount: 1},
+		{Type: "silver", Name: "5 Plata", Price: 8000, Currency: "COP", Amount: 5},
+		{Type: "gold", Name: "10 Oro", Price: 15000, Currency: "COP", Amount: 10},
+	}
 
-	if count == 0 {
-		packages := []models.StarPackage{
-			{Name: "Estrella de Bronce", Type: "bronze", Price: 2000, Currency: "COP", Amount: 1},
-			{Name: "Estrella de Plata", Type: "silver", Price: 8000, Currency: "COP", Amount: 5},
-			{Name: "Estrella de Oro", Type: "gold", Price: 15000, Currency: "COP", Amount: 10},
-		}
-
-		if err := db.Create(&packages).Error; err != nil {
-			log.Println("Error seeding star packages:", err)
+	for _, pkg := range packages {
+		var existing models.StarPackage
+		if err := db.Where("type = ?", pkg.Type).First(&existing).Error; err != nil {
+			db.Create(&pkg)
 		} else {
-			log.Println("Successfully seeded default star packages")
+			db.Model(&existing).Updates(pkg)
 		}
 	}
+	log.Println("Successfully synchronized star packages")
 }
 
 // GetPackages returns available star packages
