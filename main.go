@@ -13,6 +13,7 @@ import (
 	"github.com/harveyasprilla/sonifoy/payment-service/controllers"
 	"github.com/harveyasprilla/sonifoy/payment-service/middleware"
 	"github.com/harveyasprilla/sonifoy/payment-service/models"
+	"github.com/harveyasprilla/sonifoy/payment-service/utils"
 )
 
 func init() {
@@ -22,6 +23,7 @@ func init() {
 func main() {
 	config.ConnectDB()
 	config.ConnectRedis()
+	utils.InitKafka()
 
 	err := config.DB.AutoMigrate(&models.StarPackage{}, &models.PaymentTransaction{})
 	if err != nil {
