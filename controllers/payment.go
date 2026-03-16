@@ -67,9 +67,15 @@ func BuyStars(c *fiber.Ctx) error {
 	}
 
 	var req models.PurchaseRequest
+	body := c.Body()
+	log.Printf("[DEBUG] BuyStars request body: %s", string(body))
+
 	if err := c.BodyParser(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request format"})
+		log.Printf("[ERROR] BuyStars body parser error: %v", err)
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request format", "details": err.Error()})
 	}
+
+	log.Printf("[DEBUG] BuyStars parsed request: %+v", req)
 
 	db := config.DB
 
@@ -80,7 +86,8 @@ func BuyStars(c *fiber.Ctx) error {
 	}
 
 	// 3. Mock Payment Validation (Credit/Debit Card)
-	if len(req.CardNumber) < 15 || req.CVV == "" || req.Expiry == "" {
+	if len(req.CardNumber) < 4 || req.CVV == "" || req.Expiry == "" {
+		log.Printf("[ERROR] BuyStars validation failed: CardNumber len=%d, CVV=%s, Expiry=%s", len(req.CardNumber), req.CVV, req.Expiry)
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid card details"})
 	}
 
