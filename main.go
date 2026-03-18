@@ -51,13 +51,11 @@ func main() {
 	})
 
 	api := app.Group("/api/v1/payments")
-
-	// Endpoints
 	api.Get("/packages", controllers.GetPackages)
 	api.Post("/buy", middleware.Protected(), controllers.BuyStars)
 	api.Post("/mercadopago/preference", middleware.Protected(), controllers.CreateMercadoPagoPreference)
-	app.Post("/api/webhook/mercadopago", controllers.MercadoPagoWebhook)
-	app.Post("/api/v1/payments/payout", controllers.CreateMercadoPagoPayout)
+	api.Post("/webhook", controllers.MercadoPagoWebhook) // /api/v1/payments/webhook
+	api.Post("/payout", middleware.Protected(), controllers.CreateMercadoPagoPayout)
 
 	// Seed star packages if they don't exist
 	controllers.SeedPackages(config.DB)

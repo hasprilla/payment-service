@@ -180,10 +180,14 @@ func CreateMercadoPagoPreference(c *fiber.Ctx) error {
 
 	var userID uint
 	switch v := userIdLocal.(type) {
-	case float64: userID = uint(v)
-	case uint: userID = v
-	case int: userID = uint(v)
-	default: return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Invalid user context"})
+	case float64:
+		userID = uint(v)
+	case uint:
+		userID = v
+	case int:
+		userID = uint(v)
+	default:
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Invalid user context"})
 	}
 
 	var req models.PurchaseRequest
@@ -200,6 +204,12 @@ func CreateMercadoPagoPreference(c *fiber.Ctx) error {
 	accessToken := os.Getenv("MERCADOPAGO_ACCESS_TOKEN")
 	if accessToken == "" {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "MercadoPago not configured"})
+	}
+
+	// Use Gateway URL for webhooks so MercadoPago can reach us
+	webhookURL := os.Getenv("MERCADOPAGO_WEBHOOK_URL")
+	if webhookURL == "" {
+		webhookURL = "https://api-gateway-production-c23a.up.railway.app/api/v1/payments/webhook"
 	}
 
 	// Create preference via API
@@ -222,8 +232,8 @@ func CreateMercadoPagoPreference(c *fiber.Ctx) error {
 			"pending": "sonifoy://payment/pending",
 			"failure": "sonifoy://payment/failure",
 		},
-		"auto_return": "approved",
-		"notification_url": os.Getenv("MERCADOPAGO_WEBHOOK_URL"),
+		"auto_return":      "approved",
+		"notification_url": webhookURL,
 		"external_reference": fmt.Sprintf("%d-%d-%d", userID, pkg.ID, req.RecipientArtistID),
 	}
 
@@ -254,17 +264,43 @@ func MercadoPagoWebhook(c *fiber.Ctx) error {
 
 	log.Printf("[WEBHOOK] Received MercadoPago notification: %+v", notification)
 
+	// Can come as 'action' or 'topic'
 	action, _ := notification["action"].(string)
-	if action != "payment.created" {
+	topic, _ := notification["topic"].(string)
+
+	if action != "payment.created" && action != "payment.updated" && topic != "payment" {
+		log.Printf("[WEBHOOK] Ignoring irrelevant action/topic: %s/%s", action, topic)
 		return c.SendStatus(fiber.StatusOK)
 	}
 
 	data, ok := notification["data"].(map[string]interface{})
 	if !ok {
+		// Try root level ID for some notification versions
+		if id, exists := notification["id"]; exists {
+			data = map[string]interface{}{"id": id}
+		} else {
+			return c.SendStatus(fiber.StatusOK)
+		}
+	}
+
+	// Extract ID safely (could be string or number)
+	var paymentID string
+	if idVal, exists := data["id"]; exists {
+		switch v := idVal.(type) {
+		case string:
+			paymentID = v
+		case float64:
+			paymentID = fmt.Sprintf("%.0f", v)
+		case int:
+			paymentID = strconv.Itoa(v)
+		}
+	}
+
+	if paymentID == "" {
+		log.Printf("[WEBHOOK] Could not extract payment ID from notification")
 		return c.SendStatus(fiber.StatusOK)
 	}
 
-	paymentID, _ := data["id"].(string)
 	accessToken := os.Getenv("MERCADOPAGO_ACCESS_TOKEN")
 
 	// Verify payment status
@@ -274,6 +310,7 @@ func MercadoPagoWebhook(c *fiber.Ctx) error {
 
 	resp, err := client.Do(req)
 	if err != nil {
+		log.Printf("[WEBHOOK] Error verifying payment %s: %v", paymentID, err)
 		return c.SendStatus(fiber.StatusOK)
 	}
 	defer resp.Body.Close()
@@ -282,19 +319,21 @@ func MercadoPagoWebhook(c *fiber.Ctx) error {
 	json.NewDecoder(resp.Body).Decode(&payment)
 
 	status, _ := payment["status"].(string)
+	log.Printf("[WEBHOOK] Payment %s status: %s", paymentID, status)
+
 	if status == "approved" {
 		extRef, _ := payment["external_reference"].(string)
 		parts := strings.Split(extRef, "-")
 		if len(parts) >= 2 {
-			userID, _ := strconv.Atoi(parts[0])
-			pkgID, _ := strconv.Atoi(parts[1])
-			recipientID := 0
+			userIDInt, _ := strconv.Atoi(parts[0])
+			pkgIDInt, _ := strconv.Atoi(parts[1])
+			recipientIDInt := 0
 			if len(parts) >= 3 {
-				recipientID, _ = strconv.Atoi(parts[2])
+				recipientIDInt, _ = strconv.Atoi(parts[2])
 			}
 
-			// Process successful payment (create transaction, notify wallet)
-			processSuccessfulMPPayment(uint(userID), uint(pkgID), uint(recipientID), paymentID)
+			log.Printf("[WEBHOOK] Processing approved payment for user %d, package %d", userIDInt, pkgIDInt)
+			processSuccessfulMPPayment(uint(userIDInt), uint(pkgIDInt), uint(recipientIDInt), paymentID)
 		}
 	}
 
