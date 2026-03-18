@@ -7,6 +7,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
+	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/joho/godotenv"
 
 	"github.com/harveyasprilla/sonifoy/payment-service/config"
@@ -36,6 +37,10 @@ func main() {
 
 	app.Use(recover.New())
 	app.Use(logger.New())
+	app.Use(cors.New(cors.Config{
+		AllowOrigins: "*",
+		AllowHeaders: "Origin, Content-Type, Accept, Authorization, X-Session-ID",
+	}))
 	app.Use(middleware.Decrypt())
 
 	app.Get("/health", func(c *fiber.Ctx) error {
@@ -50,6 +55,10 @@ func main() {
 	// Endpoints
 	api.Get("/packages", controllers.GetPackages)
 	api.Post("/buy", middleware.Protected(), controllers.BuyStars)
+	api.Post("/mercadopago/preference", middleware.Protected(), controllers.CreateMercadoPagoPreference)
+	app.Post("/api/webhook/mercadopago", controllers.MercadoPagoWebhook)
+	app.Post("/api/v1/payments/mercadopago/preference", controllers.CreateMercadoPagoPreference)
+	app.Post("/api/v1/payments/payout", controllers.CreateMercadoPagoPayout)
 
 	// Seed star packages if they don't exist
 	controllers.SeedPackages(config.DB)
