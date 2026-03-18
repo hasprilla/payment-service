@@ -228,9 +228,9 @@ func CreateMercadoPagoPreference(c *fiber.Ctx) error {
 			"email": "test_user_79224068@testuser.com", // In production use actual user email
 		},
 		"back_urls": map[string]interface{}{
-			"success": "sonifoy://payment/success",
-			"pending": "sonifoy://payment/pending",
-			"failure": "sonifoy://payment/failure",
+			"success": "sonifoy:///payment/success",
+			"pending": "sonifoy:///payment/pending",
+			"failure": "sonifoy:///payment/failure",
 		},
 		"auto_return":      "approved",
 		"notification_url": webhookURL,
