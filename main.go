@@ -57,7 +57,6 @@ func main() {
 	api.Post("/buy", middleware.Protected(), controllers.BuyStars)
 	api.Post("/mercadopago/preference", middleware.Protected(), controllers.CreateMercadoPagoPreference)
 	app.Post("/api/webhook/mercadopago", controllers.MercadoPagoWebhook)
-	app.Post("/api/v1/payments/mercadopago/preference", controllers.CreateMercadoPagoPreference)
 	app.Post("/api/v1/payments/payout", controllers.CreateMercadoPagoPayout)
 
 	// Seed star packages if they don't exist
